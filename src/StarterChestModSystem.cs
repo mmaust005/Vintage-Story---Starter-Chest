@@ -13,6 +13,7 @@ namespace StarterChest
 	{
 		const string ConfigFilename = "StarterChestConfig.json";
 		const string ReceivedModDataKey = "starterchest:received";
+		static readonly AssetLocation PackagedDefaultConfigLocation = new AssetLocation("starterchest", "config/defaultconfig.json");
 
 		ICoreServerAPI sapi;
 		StarterChestConfig config;
@@ -42,12 +43,32 @@ namespace StarterChest
 
 			if (config == null)
 			{
-				config = new StarterChestConfig();
+				config = LoadPackagedDefaultConfig();
 			}
 
 			// Re-store so the file on disk always reflects the full, current schema (fills in any
 			// fields missing from an older/hand-edited config with their code defaults).
 			sapi.StoreModConfig(config, ConfigFilename);
+		}
+
+		StarterChestConfig LoadPackagedDefaultConfig()
+		{
+			IAsset asset = sapi.Assets.TryGet(PackagedDefaultConfigLocation, true);
+			if (asset == null)
+			{
+				sapi.Logger.Error("[StarterChest] Packaged default config '{0}' not found - using an empty built-in fallback (no loot configured).", PackagedDefaultConfigLocation);
+				return new StarterChestConfig();
+			}
+
+			try
+			{
+				return asset.ToObject<StarterChestConfig>();
+			}
+			catch (Exception e)
+			{
+				sapi.Logger.Error("[StarterChest] Failed to parse packaged default config '{0}': {1}. Using an empty built-in fallback (no loot configured).", PackagedDefaultConfigLocation, e.Message);
+				return new StarterChestConfig();
+			}
 		}
 
 		void OnPlayerNowPlaying(IServerPlayer byPlayer)

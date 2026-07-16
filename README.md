@@ -11,8 +11,13 @@ datapack, but configurable and mod-aware.
 
 ## Config
 
-On first run the mod writes `ModConfig/StarterChestConfig.json` in your server/game data folder.
-Edit it and restart the server (or reload the world) to apply changes.
+On first run the mod writes `ModConfig/StarterChestConfig.json` in your server/game data folder,
+seeded from the default loot list packaged with the mod
+(`assets/starterchest/config/defaultconfig.json`). Edit the `ModConfig` copy and restart the
+server (or reload the world) to apply changes - the packaged file is only ever used to seed a
+missing config, it's never read again afterwards. If you want to preconfigure a server before
+anyone has joined, you can write `ModConfig/StarterChestConfig.json` yourself ahead of time,
+matching the schema below, and the mod will use it as-is instead of the packaged default.
 
 ```json
 {

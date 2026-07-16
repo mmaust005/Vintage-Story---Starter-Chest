@@ -38,16 +38,12 @@ namespace StarterChest
 		/// <summary>Items always placed in the chest, regardless of RandomMode.</summary>
 		public List<LootEntry> FixedItems = new List<LootEntry>();
 
-		/// <summary>Candidate items for random picks. Only used when RandomMode is true.</summary>
-		public List<LootEntry> RandomPool = new List<LootEntry>
-		{
-			new LootEntry { Code = "game:firestarter", Type = "item", MinQuantity = 1, MaxQuantity = 1, Weight = 15 },
-			new LootEntry { Code = "game:flint", Type = "item", MinQuantity = 2, MaxQuantity = 4, Weight = 25 },
-			new LootEntry { Code = "game:stick", Type = "item", MinQuantity = 3, MaxQuantity = 6, Weight = 25 },
-			new LootEntry { Code = "game:rope", Type = "item", MinQuantity = 1, MaxQuantity = 2, Weight = 15 },
-			new LootEntry { Code = "game:bread-rye-perfect", Type = "item", MinQuantity = 1, MaxQuantity = 2, Weight = 20 },
-			new LootEntry { Code = "game:cheese-cheddar-1slice", Type = "item", MinQuantity = 1, MaxQuantity = 3, Weight = 20 },
-			new LootEntry { Code = "game:knife-generic-flint", Type = "item", MinQuantity = 1, MaxQuantity = 1, Weight = 10 },
-		};
+		/// <summary>
+		/// Candidate items for random picks. Only used when RandomMode is true. Left empty here on
+		/// purpose - the real shipped default lives in assets/starterchest/config/defaultconfig.json
+		/// and is only used when no user config file exists yet; this bare object is just the
+		/// last-resort fallback if that packaged asset can't be found or parsed.
+		/// </summary>
+		public List<LootEntry> RandomPool = new List<LootEntry>();
 	}
 }

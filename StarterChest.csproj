@@ -36,12 +36,15 @@
 	<!-- Copies the built mod straight into the game's Mods folder for quick local testing -->
 	<Target Name="DeployMod" AfterTargets="Build">
 		<ItemGroup>
-			<ModAssets Include="modinfo.json" />
-			<ModAssets Include="assets\**\*.*" Condition="Exists('assets')" />
+			<ModRootFiles Include="modinfo.json" />
+			<ModAssetFiles Include="assets\**\*.*" Condition="Exists('assets')" />
 		</ItemGroup>
 		<MakeDir Directories="$(VintagestoryDataPath)\Mods\StarterChest" />
 		<Copy SourceFiles="$(TargetDir)StarterChest.dll" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest" />
-		<Copy SourceFiles="@(ModAssets)" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest\%(RecursiveDir)" />
+		<Copy SourceFiles="@(ModRootFiles)" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest" />
+		<!-- %(RecursiveDir) is relative to the "assets\" prefix, so it must be re-added here or the
+		     literal "assets" folder (required for the game to discover these files) gets dropped. -->
+		<Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest\assets\%(RecursiveDir)" />
 	</Target>
 
 </Project>
