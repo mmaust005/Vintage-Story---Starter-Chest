@@ -244,7 +244,11 @@ namespace StarterChest
 			Block here = accessor.GetBlock(pos);
 			Block below = accessor.GetBlock(pos.DownCopy(1));
 
-			return here.Replaceable >= 6000 && below.Replaceable < 6000;
+			// Replaceable (grass, shrubs, snow layers, ...) is fine to overwrite at the chest's own
+			// position, but for the block below we need an actual solid top face - a shrub, for
+			// example, is non-replaceable but still has no solid top, so it must not count as
+			// "ground" or the chest ends up floating on top of it.
+			return here.Replaceable >= 6000 && below.SideSolid.OnSide(BlockFacing.UP);
 		}
 	}
 }
