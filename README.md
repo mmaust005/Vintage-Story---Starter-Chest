@@ -32,6 +32,9 @@ missing config, it's never read again afterwards. If you want to preconfigure a 
 anyone has joined, you can write `ModConfig/StarterChestConfig.json` yourself ahead of time,
 matching the schema below, and the mod will use it as-is instead of the packaged default.
 
+To reset back to the packaged defaults, delete `ModConfig/StarterChestConfig.json` and restart
+the server/world - it will be recreated from the packaged file.
+
 ```json
 {
   "ContainerCode": "game:chest-north",
@@ -55,9 +58,19 @@ matching the schema below, and the mod will use it as-is instead of the packaged
 - **AllowDuplicatePicks** - if `true`, the same pool entry can be picked more than once for the
   same chest.
 - **FixedItems** - always given, regardless of `RandomMode`. Use this for a guaranteed baseline
-  kit (e.g. always give a torch), and `RandomPool` for the randomized bonus items.
+  kit (e.g. always give a torch), and `RandomPool` for the randomized bonus items. Example
+  (always give a torch and 1-2 bread):
+  ```json
+  "FixedItems": [
+    { "Code": "game:torch-basic-up", "Type": "block", "MinQuantity": 1, "MaxQuantity": 1 },
+    { "Code": "game:bread-rye-perfect", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2 }
+  ]
+  ```
 - **RandomPool** - candidate entries for random picks, each with a relative `Weight` (higher =
-  more likely).
+  more likely). Example of adding a modded item to the pool:
+  ```json
+  { "Code": "somemodid:magic-gem", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 5 }
+  ```
 
 Each entry (`FixedItems` and `RandomPool`) supports:
 

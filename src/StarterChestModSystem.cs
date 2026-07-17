@@ -62,8 +62,8 @@ namespace StarterChest
 			if (!System.IO.File.Exists(configPath))
 			{
 				// Seed the on-disk file with the packaged asset's raw bytes (not a re-serialized
-				// object) so the human-readable comments/examples in it survive onto disk. This file
-				// is never touched again afterwards, so any edits/comments the user makes stick.
+				// object) so the formatting survives onto disk as-is. This file is never touched
+				// again afterwards, so any edits/comments the user later adds stick around.
 				IAsset seedAsset = sapi.Assets.TryGet(PackagedDefaultConfigLocation, true);
 				if (seedAsset != null)
 				{
