@@ -87,6 +87,45 @@ of slots (16 for the default chest, 36 for a trunk, varies for modded containers
 `FixedItems` + your random picks add up to more than that, the extras are dropped and a warning
 is logged, so keep pick counts reasonable.
 
+### How weighting works
+
+`Weight` has no fixed scale (not 1-100, not percentages) - it's only ever compared to the other
+`Weight` values currently in the pool. For any single draw, an entry's chance is:
+
+```
+entry's Weight / (sum of Weight across every entry still eligible for that draw)
+```
+
+For example, the packaged default pool has these weights:
+
+| Entry | Weight | Chance on the first draw |
+|---|---|---|
+| `flint` | 25 | 25 / 130 ≈ 19% |
+| `stick` | 25 | 25 / 130 ≈ 19% |
+| `bread-rye-perfect` | 20 | 20 / 130 ≈ 15% |
+| `cheese-cheddar-1slice` | 20 | 20 / 130 ≈ 15% |
+| `firestarter` | 15 | 15 / 130 ≈ 12% |
+| `rope` | 15 | 15 / 130 ≈ 12% |
+| `knife-generic-flint` | 10 | 10 / 130 ≈ 8% |
+
+(130 is the sum of all seven weights.) Doubling an entry's `Weight` roughly doubles its odds
+relative to the others; it does not need to "fit" any total - add, remove, or reweight entries
+freely and the percentages simply rebalance.
+
+`RandomPickCount` draws happen one at a time, and **`AllowDuplicatePicks` changes what "still
+eligible" means for the draws after the first**:
+
+- `false` (default) - each entry can only be won once. After it's picked, it's removed from the
+  pool for the rest of that chest, so the denominator shrinks and everyone else's odds go up
+  slightly for the remaining draws. If `RandomPickCount` is greater than or equal to the number
+  of entries in `RandomPool`, every entry just gets picked once (the pool runs out early, which is
+  the situation `AllowDuplicatePicks` doesn't apply to).
+- `true` - every draw is independent and re-rolls against the full pool with its original
+  weights, so the same high-weight entry can be won multiple times (each with its own randomized
+  quantity), and low-weight entries can end up skipped entirely by chance.
+
+`Weight` is only used for `RandomPool`; it's ignored on `FixedItems` since those are always given.
+
 ## Building
 
 The game (1.22.3) targets .NET 10, which needs the .NET 10 SDK to compile against
