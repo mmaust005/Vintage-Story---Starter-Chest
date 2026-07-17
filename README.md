@@ -66,12 +66,12 @@ is logged, so keep pick counts reasonable.
 ## Building
 
 The game (1.22.3) targets .NET 10, which needs the .NET 10 SDK to compile against
-`VintagestoryAPI.dll`/`VSSurvivalMod.dll`. This machine's default `dotnet` is still 9.0.300, so a
-separate .NET 10 SDK was installed side by side at `C:\Users\Mitch\dotnet-sdk10` (not on PATH,
-doesn't affect the system default). Build with that SDK explicitly:
+`VintagestoryAPI.dll`/`VSSurvivalMod.dll`. If your machine's default `dotnet` is older, install a
+.NET 10 SDK side by side (e.g. under `%USERPROFILE%\dotnet-sdk10`) - it won't affect the system
+default unless you put it on PATH. Build with that SDK explicitly:
 
 ```
-C:\Users\Mitch\dotnet-sdk10\dotnet.exe build
+& "$env:USERPROFILE\dotnet-sdk10\dotnet.exe" build
 ```
 
 This also copies `StarterChest.dll` and `modinfo.json` into
@@ -79,4 +79,7 @@ This also copies `StarterChest.dll` and `modinfo.json` into
 `StarterChest.csproj`), so a restart of the game/server picks up the change.
 
 If you'd rather always use this SDK for this project, add a `global.json` pinning it, or add
-`C:\Users\Mitch\dotnet-sdk10` to PATH (before the existing dotnet) for this shell.
+your side-by-side SDK folder to PATH (before the existing `dotnet`) for this shell.
+
+By default, `StarterChest.csproj` looks for the game/data folders under `%APPDATA%`. Set the
+`VINTAGE_STORY` / `VINTAGE_STORY_DATA` environment variables to override either path.

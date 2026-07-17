@@ -8,10 +8,10 @@
 		<LangVersion>latest</LangVersion>
 		<!-- Override by setting the VINTAGE_STORY environment variable if the game is installed elsewhere -->
 		<VintagestoryPath Condition="'$(VINTAGE_STORY)' != ''">$(VINTAGE_STORY)</VintagestoryPath>
-		<VintagestoryPath Condition="'$(VintagestoryPath)' == ''">C:\Users\Mitch\AppData\Roaming\Vintagestory</VintagestoryPath>
+		<VintagestoryPath Condition="'$(VintagestoryPath)' == ''">$(APPDATA)\Vintagestory</VintagestoryPath>
 		<!-- Override by setting the VINTAGE_STORY_DATA environment variable if the data folder is installed elsewhere -->
 		<VintagestoryDataPath Condition="'$(VINTAGE_STORY_DATA)' != ''">$(VINTAGE_STORY_DATA)</VintagestoryDataPath>
-		<VintagestoryDataPath Condition="'$(VintagestoryDataPath)' == ''">C:\Users\Mitch\AppData\Roaming\VintagestoryData</VintagestoryDataPath>
+		<VintagestoryDataPath Condition="'$(VintagestoryDataPath)' == ''">$(APPDATA)\VintagestoryData</VintagestoryDataPath>
 	</PropertyGroup>
 
 	<ItemGroup>
