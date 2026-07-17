@@ -23,6 +23,14 @@ namespace StarterChest
 	public class StarterChestConfig
 	{
 		/// <summary>
+		/// Which block to place as the starter container, e.g. "game:chest-north" (16 slots) or
+		/// "game:trunk-north" (36 slots). Any valid placeable container block code works, including
+		/// ones from other mods. Falls back to the default chest if the code is invalid or not a
+		/// container.
+		/// </summary>
+		public string ContainerCode = "game:chest-north";
+
+		/// <summary>
 		/// When true (the default, like Minecraft's random starter kit datapacks), RandomPickCount
 		/// entries are randomly drawn from RandomPool and added on top of FixedItems.
 		/// When false, only FixedItems are given.

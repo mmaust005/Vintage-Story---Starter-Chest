@@ -1,8 +1,65 @@
 {
+	// ============================================================================
+	//  Starter Chest configuration
+	// ============================================================================
+	// This file is generated once, the first time the server starts with no config already
+	// present at ModConfig/StarterChestConfig.json. After that it is NEVER regenerated or
+	// overwritten - edit it freely, your comments and formatting will stick around.
+	//
+	// To reset back to these packaged defaults, delete ModConfig/StarterChestConfig.json and
+	// restart the server/world - it will be recreated from this file.
+	//
+	// Changes to this file only take effect after a server restart (or reloading the world).
+	// ============================================================================
+
+	// Which block to place as the starter container.
+	//   "game:chest-north"  -> a normal chest, 16 slots (default)
+	//   "game:trunk-north"  -> a large trunk,  36 slots - good for a big custom loadout
+	// Any valid placeable container block code works here, including ones added by other mods,
+	// e.g. "somemodid:reinforced-chest-north". If the code is wrong or isn't a container, an
+	// error is logged and the mod falls back to the default chest so players still get their loot.
+	"ContainerCode": "game:chest-north",
+
+	// true  (default, like Minecraft's random starter kit datapacks) - RandomPickCount entries
+	//       are randomly drawn from RandomPool below and added on top of FixedItems.
+	// false - only FixedItems are given; RandomPool is ignored entirely.
 	"RandomMode": true,
+
+	// How many entries to randomly draw from RandomPool per player. Ignored if RandomMode is false.
 	"RandomPickCount": 4,
+
+	// If true, the same RandomPool entry can be drawn more than once for the same chest (each
+	// draw still gets its own randomized quantity). If false (default), each entry can only be
+	// picked once per chest.
 	"AllowDuplicatePicks": false,
+
+	// Items ALWAYS given to every player, regardless of RandomMode. Use this for a guaranteed
+	// baseline kit (e.g. always give a torch), and leave RandomPool below for randomized bonus
+	// loot. Empty by default - purely random, like Minecraft.
+	//
+	// Each entry needs:
+	//   Code        - item/block code, e.g. "game:bread-rye-perfect". No domain prefix defaults
+	//                 to "game". Use "othermodid:someitem" for items/blocks from other mods.
+	//   Type        - "item" or "block".
+	//   MinQuantity / MaxQuantity - stack size is randomized in this inclusive range.
+	//
+	// Example (always give a torch and 1-2 bread):
+	// "FixedItems": [
+	//   { "Code": "game:torch-basic-up", "Type": "block", "MinQuantity": 1, "MaxQuantity": 1 },
+	//   { "Code": "game:bread-rye-perfect", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2 }
+	// ],
 	"FixedItems": [],
+
+	// Candidate items for random picks (only used when RandomMode is true). Same fields as
+	// FixedItems above, plus:
+	//   Weight - relative chance of being picked; higher = more likely. Values don't need to add
+	//            up to 100, they're only compared to each other.
+	//
+	// Example of adding a modded item to the pool:
+	// { "Code": "somemodid:magic-gem", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 5 }
+	//
+	// If a code belongs to a mod that isn't installed, that entry is skipped with a log warning -
+	// it won't break the chest or any other entry.
 	"RandomPool": [
 		{ "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
 		{ "Code": "game:flint", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 25 },

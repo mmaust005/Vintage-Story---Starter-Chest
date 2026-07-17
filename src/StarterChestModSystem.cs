@@ -31,13 +31,39 @@ namespace StarterChest
 
 		void LoadConfig()
 		{
+			string configDir = sapi.GetOrCreateDataPath("ModConfig");
+			string configPath = System.IO.Path.Combine(configDir, ConfigFilename);
+
+			if (!System.IO.File.Exists(configPath))
+			{
+				// Seed the on-disk file with the packaged asset's raw bytes (not a re-serialized
+				// object) so the human-readable comments/examples in it survive onto disk. This file
+				// is never touched again afterwards, so any edits/comments the user makes stick.
+				IAsset seedAsset = sapi.Assets.TryGet(PackagedDefaultConfigLocation, true);
+				if (seedAsset != null)
+				{
+					try
+					{
+						System.IO.File.WriteAllBytes(configPath, seedAsset.Data);
+					}
+					catch (Exception e)
+					{
+						sapi.Logger.Error("[StarterChest] Failed to write default config to '{0}': {1}", configPath, e.Message);
+					}
+				}
+				else
+				{
+					sapi.Logger.Error("[StarterChest] Packaged default config '{0}' not found - no config was created on disk.", PackagedDefaultConfigLocation);
+				}
+			}
+
 			try
 			{
 				config = sapi.LoadModConfig<StarterChestConfig>(ConfigFilename);
 			}
 			catch (Exception e)
 			{
-				sapi.Logger.Error("[StarterChest] Failed to parse {0}, falling back to defaults: {1}", ConfigFilename, e.Message);
+				sapi.Logger.Error("[StarterChest] Failed to parse '{0}': {1}. Using packaged defaults for this session - your file on disk was left untouched, fix it and restart.", configPath, e.Message);
 				config = null;
 			}
 
@@ -45,10 +71,6 @@ namespace StarterChest
 			{
 				config = LoadPackagedDefaultConfig();
 			}
-
-			// Re-store so the file on disk always reflects the full, current schema (fills in any
-			// fields missing from an older/hand-edited config with their code defaults).
-			sapi.StoreModConfig(config, ConfigFilename);
 		}
 
 		StarterChestConfig LoadPackagedDefaultConfig()
@@ -165,23 +187,42 @@ namespace StarterChest
 			return new ItemStack(collectible, qty);
 		}
 
+		const string DefaultContainerCode = "game:chest-north";
+
+		Block ResolveContainerBlock()
+		{
+			Block block = sapi.World.BlockAccessor.GetBlock(new AssetLocation(config.ContainerCode));
+			if (block != null && block.Id != 0 && !string.IsNullOrEmpty(block.EntityClass))
+			{
+				return block;
+			}
+
+			sapi.Logger.Error("[StarterChest] Configured ContainerCode '{0}' is not a valid container block - falling back to the default chest ('{1}').", config.ContainerCode, DefaultContainerCode);
+			return sapi.World.BlockAccessor.GetBlock(new AssetLocation(DefaultContainerCode));
+		}
+
 		void GiveStarterChest(IServerPlayer player, List<ItemStack> stacks)
 		{
-			Block chestBlock = sapi.World.BlockAccessor.GetBlock(new AssetLocation("game:chest-north"));
-			if (chestBlock == null)
+			Block containerBlock = ResolveContainerBlock();
+			if (containerBlock == null)
 			{
-				sapi.Logger.Error("[StarterChest] Could not find the vanilla 'game:chest-north' block - aborting starter chest placement.");
+				sapi.Logger.Error("[StarterChest] Could not find the default chest block either - aborting starter chest placement.");
 				return;
 			}
 
 			BlockPos pos = FindChestPosition(player);
 
-			sapi.World.BlockAccessor.SetBlock(chestBlock.Id, pos);
+			sapi.World.BlockAccessor.SetBlock(containerBlock.Id, pos);
+
+			// Runs block-level placement behaviors (e.g. the trunk's Multiblock behavior, which
+			// registers its second block position) - SetBlock alone only sets the voxel, it doesn't
+			// invoke placement hooks the way a normal player placement would.
+			containerBlock.OnBlockPlaced(sapi.World, pos, null);
 
 			var be = sapi.World.BlockAccessor.GetBlockEntity<BlockEntityGenericTypedContainer>(pos);
 			if (be == null)
 			{
-				sapi.Logger.Error("[StarterChest] Chest block entity did not spawn at {0} - aborting.", pos);
+				sapi.Logger.Error("[StarterChest] Container block entity did not spawn at {0} - aborting.", pos);
 				return;
 			}
 
@@ -189,7 +230,7 @@ namespace StarterChest
 			FillInventory(be, stacks);
 			be.MarkDirty(true, null);
 
-			sapi.Logger.Notification("[StarterChest] Gave {0} a starter chest at {1} ({2} item stack(s)).", player.PlayerName, pos, stacks.Count);
+			sapi.Logger.Notification("[StarterChest] Gave {0} a starter chest ({1}) at {2} ({3} item stack(s)).", player.PlayerName, containerBlock.Code, pos, stacks.Count);
 			player.SendMessage(GlobalConstants.GeneralChatGroup, "A starter chest has appeared nearby!", EnumChatType.Notification, null);
 		}
 
