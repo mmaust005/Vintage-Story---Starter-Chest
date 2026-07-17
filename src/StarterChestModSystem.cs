@@ -261,6 +261,18 @@ namespace StarterChest
 			return Orientations[sapi.World.Rand.Next(Orientations.Length)];
 		}
 
+		static float? OrientationToMeshAngle(string orientation)
+		{
+			switch (orientation)
+			{
+				case "north": return 0f;
+				case "east": return GameMath.PI + GameMath.PIHALF;
+				case "south": return GameMath.PI;
+				case "west": return GameMath.PIHALF;
+				default: return null;
+			}
+		}
+
 		void GiveStarterChest(IServerPlayer player, List<ItemStack> stacks)
 		{
 			Block containerBlock = ResolveContainerBlock();
@@ -270,7 +282,7 @@ namespace StarterChest
 				return;
 			}
 
-			BlockPos pos = FindChestPosition(player);
+			BlockPos pos = FindChestPosition(player, containerBlock);
 
 			sapi.World.BlockAccessor.SetBlock(containerBlock.Id, pos);
 
@@ -287,6 +299,20 @@ namespace StarterChest
 			}
 
 			be.OnBlockPlaced(null);
+
+			// SetBlock places the correct block variant (chest-north/east/south/west, ...) but
+			// bypasses DoPlaceBlock, which is what normally derives the entity's rendered MeshAngle
+			// from the player's facing during a real placement. Without this, every chest renders
+			// at the same default angle regardless of which variant was actually placed.
+			if (containerBlock.Variant.TryGetValue("side", out string side))
+			{
+				float? meshAngle = OrientationToMeshAngle(side);
+				if (meshAngle.HasValue)
+				{
+					be.MeshAngle = meshAngle.Value;
+				}
+			}
+
 			FillInventory(be, stacks);
 			be.MarkDirty(true, null);
 
@@ -313,7 +339,20 @@ namespace StarterChest
 			}
 		}
 
-		BlockPos FindChestPosition(IServerPlayer player)
+		// The trunk visually/physically occupies a second cell next to the one it's actually placed
+		// in (a "virtual" second cell handled via collision-mirroring, not a second SetBlock), sized
+		// and positioned per orientation in its own asset (assets/survival/blocktypes/wood/chest-trunk.json,
+		// the "Multiblock" behavior's propertiesByType). There's no public API to read that at
+		// runtime, so it's hardcoded here as the one known wide container worth accounting for.
+		static readonly Dictionary<string, Vec3i> TrunkSecondCellOffset = new Dictionary<string, Vec3i>
+		{
+			{ "north", new Vec3i(1, 0, 0) },
+			{ "south", new Vec3i(-1, 0, 0) },
+			{ "east", new Vec3i(0, 0, 1) },
+			{ "west", new Vec3i(0, 0, -1) },
+		};
+
+		BlockPos FindChestPosition(IServerPlayer player, Block containerBlock)
 		{
 			BlockPos feet = player.Entity.Pos.AsBlockPos.Copy();
 			BlockFacing facing = BlockFacing.HorizontalFromYaw(player.Entity.Pos.Yaw);
@@ -332,14 +371,28 @@ namespace StarterChest
 
 			foreach (BlockPos candidate in candidates)
 			{
-				if (IsSuitable(candidate)) return candidate;
+				if (IsSuitable(candidate, containerBlock)) return candidate;
 			}
 
 			// Nothing ideal nearby - just place it in front of the player, like a direct block placement would.
 			return candidates[0];
 		}
 
-		bool IsSuitable(BlockPos pos)
+		bool IsSuitable(BlockPos pos, Block containerBlock)
+		{
+			if (!HasGroundSupport(pos)) return false;
+
+			if (containerBlock.Class == "BlockGenericTypedContainerTrunk"
+				&& containerBlock.Variant.TryGetValue("side", out string side)
+				&& TrunkSecondCellOffset.TryGetValue(side, out Vec3i offset))
+			{
+				if (!HasGroundSupport(pos.AddCopy(offset.X, offset.Y, offset.Z))) return false;
+			}
+
+			return true;
+		}
+
+		bool HasGroundSupport(BlockPos pos)
 		{
 			IBlockAccessor accessor = sapi.World.BlockAccessor;
 			Block here = accessor.GetBlock(pos);

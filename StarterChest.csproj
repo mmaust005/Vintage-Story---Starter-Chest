@@ -48,4 +48,29 @@
 		<Copy SourceFiles="@(ModAssetFiles)" DestinationFolder="$(VintagestoryDataPath)\Mods\StarterChest\assets\%(RecursiveDir)" />
 	</Target>
 
+	<!-- Builds a clean release zip (mod files only - no source, docs, or .pdb) at release\StarterChest.zip.
+	     Run explicitly with: dotnet build -c Release -t:PackMod -->
+	<Target Name="PackMod" DependsOnTargets="Build">
+		<PropertyGroup>
+			<PackModStageDir>$(MSBuildProjectDirectory)\release\stage\</PackModStageDir>
+			<PackModOutputDir>$(MSBuildProjectDirectory)\release\</PackModOutputDir>
+			<PackModZipFile>$(PackModOutputDir)StarterChest.zip</PackModZipFile>
+		</PropertyGroup>
+		<ItemGroup>
+			<PackModRootFiles Include="modinfo.json" />
+			<PackModRootFiles Include="modicon.png" Condition="Exists('modicon.png')" />
+			<PackModRootFiles Include="README.md" Condition="Exists('README.md')" />
+			<PackModAssetFiles Include="assets\**\*.*" Exclude="assets\**\*.md" Condition="Exists('assets')" />
+		</ItemGroup>
+		<RemoveDir Directories="$(PackModStageDir)" />
+		<MakeDir Directories="$(PackModStageDir)" />
+		<Copy SourceFiles="$(TargetDir)StarterChest.dll" DestinationFolder="$(PackModStageDir)" />
+		<Copy SourceFiles="@(PackModRootFiles)" DestinationFolder="$(PackModStageDir)" />
+		<Copy SourceFiles="@(PackModAssetFiles)" DestinationFolder="$(PackModStageDir)assets\%(RecursiveDir)" />
+		<Delete Files="$(PackModZipFile)" Condition="Exists('$(PackModZipFile)')" />
+		<ZipDirectory SourceDirectory="$(PackModStageDir)" DestinationFile="$(PackModZipFile)" />
+		<RemoveDir Directories="$(PackModStageDir)" />
+		<Message Importance="high" Text="Built release zip: $(PackModZipFile)" />
+	</Target>
+
 </Project>
