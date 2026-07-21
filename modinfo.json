@@ -2,7 +2,7 @@
 	"type": "code",
 	"name": "Starter Chest",
 	"modid": "starterchest",
-	"version": "1.1.0",
+	"version": "1.2.0",
 	"networkVersion": "1.0.0",
 	"description": "Gives every new player a one-time starter chest filled with configurable loot. Supports fixed guaranteed items, a weighted random pool (enabled by default), and items/blocks from other mods.",
 	"authors": [ "Duffas" ],

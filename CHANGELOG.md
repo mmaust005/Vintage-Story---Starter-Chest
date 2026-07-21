@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.2.0
+
+### Added
+- Default class loadouts shipped for all 6 vanilla classes (`commoner`, `hunter`, `malefactor`,
+  `clockmaker`, `blackguard`, `tailor`), each with thematically appropriate gear.
+
+### Changed
+- Class loadouts moved from the inline `ClassLoadouts` config block (added in 1.1.0) to one file
+  per class under `ModConfig/StarterChestClasses/` (e.g. `hunter.json`), seeded on first run.
+  Easier for mod authors/communities to add support for a new class - just drop in one file - and
+  avoids the main config growing unwieldy as more class mods get installed.
+
 ## 1.1.0
 
 ### Added

@@ -1,0 +1,13 @@
+{
+	"RandomMode": true,
+	"RandomPickCount": 2,
+	"AllowDuplicatePicks": false,
+	"FixedItems": [
+		{ "Code": "game:shield-blackguard", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
+	],
+	"RandomPool": [
+		{ "Code": "game:spear-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 20 },
+		{ "Code": "game:bread-rye-perfect", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 25 },
+		{ "Code": "game:cheese-cheddar-1slice", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 20 }
+	]
+}

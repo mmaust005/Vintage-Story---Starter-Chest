@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Newtonsoft.Json;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
@@ -14,10 +15,13 @@ namespace StarterChest
 	{
 		const string ConfigFilename = "StarterChestConfig.json";
 		const string ReceivedModDataKey = "starterchest:received";
+		const string ClassLoadoutsDirName = "StarterChestClasses";
 		static readonly AssetLocation PackagedDefaultConfigLocation = new AssetLocation("starterchest", "config/defaultconfig.json");
+		const string PackagedClassLoadoutsPath = "config/classes/";
 
 		ICoreServerAPI sapi;
 		StarterChestConfig config;
+		readonly Dictionary<string, ClassLoadout> classLoadouts = new Dictionary<string, ClassLoadout>();
 		readonly HashSet<string> warnedMissingCodes = new HashSet<string>();
 
 		public override bool ShouldLoad(EnumAppSide forSide) => forSide == EnumAppSide.Server;
@@ -26,6 +30,7 @@ namespace StarterChest
 		{
 			sapi = api;
 			LoadConfig();
+			LoadClassLoadouts();
 
 			sapi.Event.PlayerNowPlaying += OnPlayerNowPlaying;
 
@@ -161,6 +166,58 @@ namespace StarterChest
 			}
 		}
 
+		// Loadouts live one-per-file under ModConfig/StarterChestClasses/, named "<classcode>.json"
+		// (e.g. "hunter.json"), instead of one big dictionary in the main config - so a mod author or
+		// community member adding support for a new class is just one file to drop in, and a server
+		// with many class mods installed doesn't end up with one unwieldy config file. The folder is
+		// seeded once from the packaged vanilla class defaults and never touched again afterwards,
+		// same as the main config; anything added later (built-in or drag-and-dropped) is picked up
+		// on every server start by scanning whatever's actually in the folder.
+		void LoadClassLoadouts()
+		{
+			string classDir = System.IO.Path.Combine(sapi.GetOrCreateDataPath("ModConfig"), ClassLoadoutsDirName);
+
+			if (!System.IO.Directory.Exists(classDir))
+			{
+				System.IO.Directory.CreateDirectory(classDir);
+				SeedPackagedClassLoadouts(classDir);
+			}
+
+			classLoadouts.Clear();
+			foreach (string filePath in System.IO.Directory.GetFiles(classDir, "*.json"))
+			{
+				string classCode = System.IO.Path.GetFileNameWithoutExtension(filePath).ToLowerInvariant();
+				try
+				{
+					ClassLoadout loadout = JsonConvert.DeserializeObject<ClassLoadout>(System.IO.File.ReadAllText(filePath));
+					if (loadout != null) classLoadouts[classCode] = loadout;
+				}
+				catch (Exception e)
+				{
+					sapi.Logger.Error("[StarterChest] Failed to parse class loadout '{0}': {1}. Skipping this file.", filePath, e.Message);
+				}
+			}
+
+			sapi.Logger.Notification("[StarterChest] Loaded {0} class loadout(s) from '{1}'.", classLoadouts.Count, classDir);
+		}
+
+		void SeedPackagedClassLoadouts(string classDir)
+		{
+			List<IAsset> assets = sapi.Assets.GetMany(PackagedClassLoadoutsPath, "starterchest");
+			foreach (IAsset asset in assets)
+			{
+				string destPath = System.IO.Path.Combine(classDir, System.IO.Path.GetFileName(asset.Location.Path));
+				try
+				{
+					System.IO.File.WriteAllBytes(destPath, asset.Data);
+				}
+				catch (Exception e)
+				{
+					sapi.Logger.Error("[StarterChest] Failed to seed class loadout '{0}': {1}", destPath, e.Message);
+				}
+			}
+		}
+
 		void OnPlayerNowPlaying(IServerPlayer byPlayer)
 		{
 			if (byPlayer.GetModData(ReceivedModDataKey, false))
@@ -185,7 +242,7 @@ namespace StarterChest
 
 		EffectiveLoadout ResolveLoadout(string classCode, out bool usedClassLoadout)
 		{
-			if (!string.IsNullOrEmpty(classCode) && config.ClassLoadouts.TryGetValue(classCode, out ClassLoadout loadout))
+			if (!string.IsNullOrEmpty(classCode) && classLoadouts.TryGetValue(classCode.ToLowerInvariant(), out ClassLoadout loadout))
 			{
 				usedClassLoadout = true;
 				return new EffectiveLoadout

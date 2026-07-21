@@ -1,0 +1,14 @@
+{
+	"RandomMode": true,
+	"RandomPickCount": 2,
+	"AllowDuplicatePicks": false,
+	"FixedItems": [
+		{ "Code": "game:gear-rusty", "Type": "item", "MinQuantity": 2, "MaxQuantity": 3 }
+	],
+	"RandomPool": [
+		{ "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:flint", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 20 },
+		{ "Code": "game:stick", "Type": "item", "MinQuantity": 3, "MaxQuantity": 6, "Weight": 20 }
+	]
+}

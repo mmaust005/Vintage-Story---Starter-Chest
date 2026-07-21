@@ -74,14 +74,5 @@ namespace StarterChest
 		/// last-resort fallback if that packaged asset can't be found or parsed.
 		/// </summary>
 		public List<LootEntry> RandomPool = new List<LootEntry>();
-
-		/// <summary>
-		/// Optional per-class loadouts, keyed by character class code (e.g. "hunter", "clockmaker",
-		/// "commoner"). A player whose class has an entry here gets that loadout's FixedItems/
-		/// RandomPool/RandomPickCount/AllowDuplicatePicks instead of the top-level ones above.
-		/// Classes without an entry - including modded classes - fall back to the top-level
-		/// settings unchanged. Empty by default.
-		/// </summary>
-		public Dictionary<string, ClassLoadout> ClassLoadouts = new Dictionary<string, ClassLoadout>();
 	}
 }

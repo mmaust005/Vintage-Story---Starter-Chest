@@ -1,0 +1,14 @@
+{
+	"RandomMode": true,
+	"RandomPickCount": 3,
+	"AllowDuplicatePicks": false,
+	"FixedItems": [
+		{ "Code": "game:basket-normal-reed", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
+	],
+	"RandomPool": [
+		{ "Code": "game:flint", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 25 },
+		{ "Code": "game:stick", "Type": "item", "MinQuantity": 3, "MaxQuantity": 6, "Weight": 25 },
+		{ "Code": "game:rope", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2, "Weight": 15 },
+		{ "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 }
+	]
+}

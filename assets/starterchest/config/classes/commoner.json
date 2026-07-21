@@ -1,6 +1,4 @@
 {
-	"ContainerCode": "game:chest",
-	"ContainerOrientation": "",
 	"RandomMode": true,
 	"RandomPickCount": 4,
 	"AllowDuplicatePicks": false,

@@ -10,8 +10,9 @@ placed on the ground near them the first time they spawn - a configurable, mod-a
   refilled or respawned. It faces a random direction by default, or a fixed one if configured.
 - Loot combines guaranteed `FixedItems` with a weighted `RandomPool`, auto-fit to however many
   slots the chosen container actually has - no manual tuning needed for modded containers.
-- Loadouts can be customized per character class (`ClassLoadouts`), so a Hunter and a Clockmaker
-  can get different, class-appropriate starting gear instead of the same shared pool.
+- Loadouts can be customized per character class - one file per class under
+  `ModConfig/StarterChestClasses/`, shipped with defaults for all 6 vanilla classes - so a Hunter
+  and a Clockmaker get different, class-appropriate starting gear instead of the same shared pool.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
   dying and respawning, will not grant a second chest.
 - Item/block codes can reference any installed mod, not just vanilla content.
@@ -28,8 +29,8 @@ new character. Instead, server operators (`controlserver` privilege) can run:
 ```
 
 This clears that (online) player's starter-chest flag and immediately gives them a fresh chest
-with the current config - no restart or new character needed. If `ClassLoadouts` has an entry
-for that player's character class, this uses it, same as a real first-join would.
+with the current config - no restart or new character needed. If a loadout file exists for that
+player's character class, this uses it, same as a real first-join would.
 
 To check what a config change *would* give without spawning a chest at all:
 
@@ -64,8 +65,7 @@ the server/world - it will be recreated from the packaged file.
   "FixedItems": [],
   "RandomPool": [
     { "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 }
-  ],
-  "ClassLoadouts": {}
+  ]
 }
 ```
 
@@ -96,27 +96,6 @@ the server/world - it will be recreated from the packaged file.
   ```json
   { "Code": "somemodid:magic-gem", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 5 }
   ```
-- **ClassLoadouts** - optional, gives specific character classes (e.g. `"hunter"`,
-  `"clockmaker"`, `"commoner"`) their own loadout instead of the top-level one above. Each entry
-  has the exact same shape as the top-level config - its own `FixedItems`, `RandomPool`,
-  `RandomPickCount`, `AllowDuplicatePicks`. A class without an entry here (including any modded
-  class) just uses the top-level `FixedItems`/`RandomPool` as normal - this is purely additive.
-  Example (hunters always get a knife, plus up to 2 random picks from a hunter-flavored pool):
-  ```json
-  "ClassLoadouts": {
-    "hunter": {
-      "RandomPickCount": 2,
-      "FixedItems": [
-        { "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
-      ],
-      "RandomPool": [
-        { "Code": "game:rope", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 20 },
-        { "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 }
-      ]
-    }
-  }
-  ```
-
 Each entry (`FixedItems` and `RandomPool`) supports:
 
 | Field | Meaning |
@@ -135,6 +114,38 @@ modded containers too, not just the vanilla chest/trunk) - so you won't get a lo
 this in normal use. The only case still worth a warning is `FixedItems` alone exceeding the
 container's slots, since those are meant to be guaranteed and can't be auto-capped without
 breaking that guarantee.
+
+### Class loadouts
+
+A player's chosen character class can get its own loadout instead of the top-level
+`FixedItems`/`RandomPool` above. Rather than one big list buried in the main config, each class
+is its own file under `ModConfig/StarterChestClasses/`, named `<classcode>.json` (e.g.
+`hunter.json`). On first run, this folder is created and seeded with a default loadout for all
+6 vanilla classes (`commoner`, `hunter`, `malefactor`, `clockmaker`, `blackguard`, `tailor`) -
+edit any of them freely, they're never touched again afterwards, same as the main config.
+
+A class without a file here - including any class added by another mod - just falls back to the
+top-level `FixedItems`/`RandomPool` as normal.
+
+Each file has the same shape as the top-level config:
+
+```json
+{
+  "RandomMode": true,
+  "RandomPickCount": 2,
+  "AllowDuplicatePicks": false,
+  "FixedItems": [
+    { "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
+  ],
+  "RandomPool": [
+    { "Code": "game:rope", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 20 }
+  ]
+}
+```
+
+This is also how modded classes get support: a mod author (or anyone in the community) can ship
+or share a single `<theirclasscode>.json` file, and a server admin just drops it into
+`ModConfig/StarterChestClasses/` and restarts - no editing the main config at all.
 
 ### How weighting works
 

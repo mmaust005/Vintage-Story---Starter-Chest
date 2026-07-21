@@ -1,0 +1,14 @@
+{
+	"RandomMode": true,
+	"RandomPickCount": 3,
+	"AllowDuplicatePicks": false,
+	"FixedItems": [
+		{ "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
+	],
+	"RandomPool": [
+		{ "Code": "game:bow-simple", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 },
+		{ "Code": "game:arrow-flint", "Type": "item", "MinQuantity": 6, "MaxQuantity": 12, "Weight": 25 },
+		{ "Code": "game:rope", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2, "Weight": 15 },
+		{ "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 }
+	]
+}
