@@ -22,7 +22,8 @@ new character. Instead, server operators (`controlserver` privilege) can run:
 ```
 
 This clears that (online) player's starter-chest flag and immediately gives them a fresh chest
-with the current config - no restart or new character needed.
+with the current config - no restart or new character needed. If `ClassLoadouts` has an entry
+for that player's character class, this uses it, same as a real first-join would.
 
 To check what a config change *would* give without spawning a chest at all:
 
@@ -87,6 +88,26 @@ the server/world - it will be recreated from the packaged file.
   more likely). Example of adding a modded item to the pool:
   ```json
   { "Code": "somemodid:magic-gem", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 5 }
+  ```
+- **ClassLoadouts** - optional, gives specific character classes (e.g. `"hunter"`,
+  `"clockmaker"`, `"commoner"`) their own loadout instead of the top-level one above. Each entry
+  has the exact same shape as the top-level config - its own `FixedItems`, `RandomPool`,
+  `RandomPickCount`, `AllowDuplicatePicks`. A class without an entry here (including any modded
+  class) just uses the top-level `FixedItems`/`RandomPool` as normal - this is purely additive.
+  Example (hunters always get a knife, plus up to 2 random picks from a hunter-flavored pool):
+  ```json
+  "ClassLoadouts": {
+    "hunter": {
+      "RandomPickCount": 2,
+      "FixedItems": [
+        { "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1 }
+      ],
+      "RandomPool": [
+        { "Code": "game:rope", "Type": "item", "MinQuantity": 2, "MaxQuantity": 4, "Weight": 20 },
+        { "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 }
+      ]
+    }
+  }
   ```
 
 Each entry (`FixedItems` and `RandomPool`) supports:

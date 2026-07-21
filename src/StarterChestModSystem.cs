@@ -67,16 +67,20 @@ namespace StarterChest
 				return TextCommandResult.Error("Could not resolve a valid container block - check ContainerCode.");
 			}
 
-			int? maxSlots = EstimateSlotCount(containerBlock);
-			List<ItemStack> stacks = BuildLootStacks(maxSlots ?? int.MaxValue);
+			string classCode = GetClassCode(target);
+			EffectiveLoadout loadout = ResolveLoadout(classCode, out bool usedClassLoadout);
 
+			int? maxSlots = EstimateSlotCount(containerBlock);
+			List<ItemStack> stacks = BuildLootStacks(maxSlots ?? int.MaxValue, loadout);
+
+			string loadoutDesc = usedClassLoadout ? $"'{classCode}' class loadout" : "default loadout";
 			if (stacks.Count == 0)
 			{
-				return TextCommandResult.Success("No loot configured (check FixedItems/RandomPool) - nothing would be given.");
+				return TextCommandResult.Success($"No loot configured in the {loadoutDesc} (check FixedItems/RandomPool) - nothing would be given.");
 			}
 
 			var sb = new StringBuilder();
-			sb.AppendLine($"Would give {target.PlayerName} a {containerBlock.Code} with {stacks.Count} stack(s):");
+			sb.AppendLine($"Would give {target.PlayerName} ({loadoutDesc}) a {containerBlock.Code} with {stacks.Count} stack(s):");
 			foreach (ItemStack stack in stacks)
 			{
 				sb.AppendLine($"  {stack.Collectible.Code} x{stack.StackSize}");
@@ -88,6 +92,10 @@ namespace StarterChest
 
 			return TextCommandResult.Success(sb.ToString());
 		}
+
+		// The character class the player picked at creation, e.g. "hunter", "clockmaker",
+		// "commoner" - null if unset (shouldn't normally happen for a fully-created character).
+		static string GetClassCode(IServerPlayer player) => player.Entity.WatchedAttributes.GetString("characterClass", null);
 
 		void LoadConfig()
 		{
@@ -164,15 +172,52 @@ namespace StarterChest
 			GiveStarterChest(byPlayer);
 		}
 
-		List<ItemStack> BuildLootStacks(int maxSlots)
+		// Resolved set of FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks/RandomMode to
+		// actually use for one chest - either a matching ClassLoadout, or the top-level config.
+		class EffectiveLoadout
+		{
+			public bool RandomMode;
+			public int RandomPickCount;
+			public bool AllowDuplicatePicks;
+			public List<LootEntry> FixedItems;
+			public List<LootEntry> RandomPool;
+		}
+
+		EffectiveLoadout ResolveLoadout(string classCode, out bool usedClassLoadout)
+		{
+			if (!string.IsNullOrEmpty(classCode) && config.ClassLoadouts.TryGetValue(classCode, out ClassLoadout loadout))
+			{
+				usedClassLoadout = true;
+				return new EffectiveLoadout
+				{
+					RandomMode = loadout.RandomMode,
+					RandomPickCount = loadout.RandomPickCount,
+					AllowDuplicatePicks = loadout.AllowDuplicatePicks,
+					FixedItems = loadout.FixedItems,
+					RandomPool = loadout.RandomPool,
+				};
+			}
+
+			usedClassLoadout = false;
+			return new EffectiveLoadout
+			{
+				RandomMode = config.RandomMode,
+				RandomPickCount = config.RandomPickCount,
+				AllowDuplicatePicks = config.AllowDuplicatePicks,
+				FixedItems = config.FixedItems,
+				RandomPool = config.RandomPool,
+			};
+		}
+
+		List<ItemStack> BuildLootStacks(int maxSlots, EffectiveLoadout loadout)
 		{
 			var result = new List<ItemStack>();
 
-			foreach (LootEntry entry in config.FixedItems)
+			foreach (LootEntry entry in loadout.FixedItems)
 			{
 				if (result.Count >= maxSlots)
 				{
-					sapi.Logger.Warning("[StarterChest] FixedItems alone ({0} entries) exceed the container's {1} slot(s) - the rest were skipped.", config.FixedItems.Count, maxSlots);
+					sapi.Logger.Warning("[StarterChest] FixedItems alone ({0} entries) exceed the container's {1} slot(s) - the rest were skipped.", loadout.FixedItems.Count, maxSlots);
 					break;
 				}
 
@@ -180,14 +225,14 @@ namespace StarterChest
 				if (stack != null) result.Add(stack);
 			}
 
-			if (config.RandomMode)
+			if (loadout.RandomMode)
 			{
-				var pool = config.RandomPool.Where(e => ResolveCollectible(e) != null).ToList();
+				var pool = loadout.RandomPool.Where(e => ResolveCollectible(e) != null).ToList();
 				var remaining = new List<LootEntry>(pool);
 
 				// Auto-fit: never attempt more picks than the container has room left for, instead
 				// of rolling the full RandomPickCount and dropping whatever doesn't fit afterwards.
-				int picks = Math.Min(config.RandomPickCount, Math.Max(0, maxSlots - result.Count));
+				int picks = Math.Min(loadout.RandomPickCount, Math.Max(0, maxSlots - result.Count));
 				for (int i = 0; i < picks && remaining.Count > 0; i++)
 				{
 					int totalWeight = remaining.Sum(e => Math.Max(0, e.Weight));
@@ -210,7 +255,7 @@ namespace StarterChest
 					ItemStack stack = ResolveStack(chosen);
 					if (stack != null) result.Add(stack);
 
-					if (!config.AllowDuplicatePicks) remaining.Remove(chosen);
+					if (!loadout.AllowDuplicatePicks) remaining.Remove(chosen);
 				}
 			}
 
@@ -324,10 +369,12 @@ namespace StarterChest
 
 		bool GiveStarterChest(IServerPlayer player)
 		{
+			EffectiveLoadout loadout = ResolveLoadout(GetClassCode(player), out _);
+
 			// Cheap pre-check so we don't place a chest at all when nothing could ever be given -
 			// the real, capacity-aware loot list is only known once the container is placed below.
-			bool anyPossibleLoot = config.FixedItems.Count > 0
-				|| (config.RandomMode && config.RandomPool.Count > 0 && config.RandomPickCount > 0);
+			bool anyPossibleLoot = loadout.FixedItems.Count > 0
+				|| (loadout.RandomMode && loadout.RandomPool.Count > 0 && loadout.RandomPickCount > 0);
 			if (!anyPossibleLoot) return false;
 
 			Block containerBlock = ResolveContainerBlock();
@@ -371,7 +418,7 @@ namespace StarterChest
 			// The real, live slot count - this is what makes the RandomPickCount auto-fit in
 			// BuildLootStacks work correctly for any container, vanilla or modded, without needing
 			// to know its schema in advance.
-			List<ItemStack> stacks = BuildLootStacks(be.Inventory.Count);
+			List<ItemStack> stacks = BuildLootStacks(be.Inventory.Count, loadout);
 			if (stacks.Count == 0)
 			{
 				// Everything configured turned out to be unresolvable (e.g. all missing-mod codes) -

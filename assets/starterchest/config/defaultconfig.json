@@ -13,5 +13,6 @@
 		{ "Code": "game:bread-rye-perfect", "Type": "item", "MinQuantity": 1, "MaxQuantity": 2, "Weight": 20 },
 		{ "Code": "game:cheese-cheddar-1slice", "Type": "item", "MinQuantity": 1, "MaxQuantity": 3, "Weight": 20 },
 		{ "Code": "game:knife-generic-flint", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 10 }
-	]
+	],
+	"ClassLoadouts": {}
 }
