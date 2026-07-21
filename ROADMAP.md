@@ -1,15 +1,18 @@
 # Roadmap
 
-Ideas for after v1.0.0, not yet started.
+- **Class-based starter loadouts** - still being designed. Not generic themed "kits" (fisher vs
+  miner) - the starter chest should reflect the character class the player picked at creation,
+  so a Hunter and a Clockmaker get different, class-appropriate loadouts instead of the same
+  random pool. Needs figuring out how to read the player's chosen class server-side and how that
+  maps onto config (e.g. a loadout per class, falling back to the existing FixedItems/RandomPool
+  behavior for classes without one configured).
 
-- **Loot "kits"** - let `RandomPool` optionally group items into named bundles (e.g. "fisher kit"
-  vs "miner kit") and pick one bundle rather than N loose weighted items. Top priority: tying kits
-  to the character class the player picks at character creation, so new players get a
-  class-appropriate starter kit instead of fully random loot.
-- **Dry-run command** - `.starterchest preview <player>` that rolls and prints what would be
-  given, without spawning a chest, for tuning loot weights without spamming test chests.
-- **Auto-fit picks to slots** - instead of just warning when loot overflows the container slots,
-  optionally auto-cap `RandomPickCount` to what actually fits.
-- **Localization** - the "A starter chest has appeared nearby!" chat message is hardcoded English
-  in `StarterChestModSystem.cs`; move it to a lang file so it can be translated like vanilla
-  strings.
+## Done (since v1.0.0)
+
+- ~~Dry-run command~~ - `/starterchest preview <player>` rolls and prints what would be given,
+  without spawning a chest.
+- ~~Auto-fit picks to slots~~ - `RandomPickCount` now automatically caps itself to the real
+  container's remaining slots (read from the placed container, so it works for modded containers
+  too), instead of warning and dropping overflow.
+- ~~Localization~~ - the starter-chest chat message now resolves per-player via
+  `assets/starterchest/lang/en.json` instead of being hardcoded English.

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Vintagestory.API.Common;
 using Vintagestory.API.Config;
 using Vintagestory.API.MathTools;
@@ -35,6 +36,11 @@ namespace StarterChest
 					.WithDescription("Clears the given (online) player's starter-chest flag and immediately gives them a fresh one - handy for testing config changes without restarting the server.")
 					.WithArgs(sapi.ChatCommands.Parsers.OnlinePlayer("player"))
 					.HandleWith(OnResetCommand)
+				.EndSubCommand()
+				.BeginSubCommand("preview")
+					.WithDescription("Rolls the configured loot and prints what would be given, without spawning a chest or touching the player's received-chest flag - for tuning weights without spamming test chests.")
+					.WithArgs(sapi.ChatCommands.Parsers.OnlinePlayer("player"))
+					.HandleWith(OnPreviewCommand)
 				.EndSubCommand();
 		}
 
@@ -44,14 +50,43 @@ namespace StarterChest
 
 			target.SetModData(ReceivedModDataKey, true);
 
-			List<ItemStack> stacks = BuildLootStacks();
-			if (stacks.Count == 0)
+			if (GiveStarterChest(target))
 			{
-				return TextCommandResult.Success($"Cleared {target.PlayerName}'s starter-chest flag, but no loot is configured (check FixedItems/RandomPool) so no chest was given.");
+				return TextCommandResult.Success($"Reset and gave {target.PlayerName} a fresh starter chest.");
+			}
+			return TextCommandResult.Success($"Cleared {target.PlayerName}'s starter-chest flag, but no loot is configured (check FixedItems/RandomPool) so no chest was given.");
+		}
+
+		TextCommandResult OnPreviewCommand(TextCommandCallingArgs args)
+		{
+			var target = (IServerPlayer)args[0];
+
+			Block containerBlock = ResolveContainerBlock();
+			if (containerBlock == null)
+			{
+				return TextCommandResult.Error("Could not resolve a valid container block - check ContainerCode.");
 			}
 
-			GiveStarterChest(target, stacks);
-			return TextCommandResult.Success($"Reset and gave {target.PlayerName} a fresh starter chest.");
+			int? maxSlots = EstimateSlotCount(containerBlock);
+			List<ItemStack> stacks = BuildLootStacks(maxSlots ?? int.MaxValue);
+
+			if (stacks.Count == 0)
+			{
+				return TextCommandResult.Success("No loot configured (check FixedItems/RandomPool) - nothing would be given.");
+			}
+
+			var sb = new StringBuilder();
+			sb.AppendLine($"Would give {target.PlayerName} a {containerBlock.Code} with {stacks.Count} stack(s):");
+			foreach (ItemStack stack in stacks)
+			{
+				sb.AppendLine($"  {stack.Collectible.Code} x{stack.StackSize}");
+			}
+			if (maxSlots == null)
+			{
+				sb.Append("(Couldn't determine this container's slot count ahead of placement, so RandomPickCount wasn't capacity-capped for this preview - the real chest may hold fewer stacks.)");
+			}
+
+			return TextCommandResult.Success(sb.ToString());
 		}
 
 		void LoadConfig()
@@ -126,22 +161,21 @@ namespace StarterChest
 			}
 
 			byPlayer.SetModData(ReceivedModDataKey, true);
-
-			List<ItemStack> stacks = BuildLootStacks();
-			if (stacks.Count == 0)
-			{
-				return;
-			}
-
-			GiveStarterChest(byPlayer, stacks);
+			GiveStarterChest(byPlayer);
 		}
 
-		List<ItemStack> BuildLootStacks()
+		List<ItemStack> BuildLootStacks(int maxSlots)
 		{
 			var result = new List<ItemStack>();
 
 			foreach (LootEntry entry in config.FixedItems)
 			{
+				if (result.Count >= maxSlots)
+				{
+					sapi.Logger.Warning("[StarterChest] FixedItems alone ({0} entries) exceed the container's {1} slot(s) - the rest were skipped.", config.FixedItems.Count, maxSlots);
+					break;
+				}
+
 				ItemStack stack = ResolveStack(entry);
 				if (stack != null) result.Add(stack);
 			}
@@ -151,7 +185,9 @@ namespace StarterChest
 				var pool = config.RandomPool.Where(e => ResolveCollectible(e) != null).ToList();
 				var remaining = new List<LootEntry>(pool);
 
-				int picks = config.RandomPickCount;
+				// Auto-fit: never attempt more picks than the container has room left for, instead
+				// of rolling the full RandomPickCount and dropping whatever doesn't fit afterwards.
+				int picks = Math.Min(config.RandomPickCount, Math.Max(0, maxSlots - result.Count));
 				for (int i = 0; i < picks && remaining.Count > 0; i++)
 				{
 					int totalWeight = remaining.Sum(e => Math.Max(0, e.Weight));
@@ -273,13 +309,32 @@ namespace StarterChest
 			}
 		}
 
-		void GiveStarterChest(IServerPlayer player, List<ItemStack> stacks)
+		// Best-effort slot count read from the block's own JSON attributes, following the same
+		// "quantitySlots"/"defaultType" convention the vanilla chest and trunk use. Only meant for
+		// the preview command, which can't place a real block entity to ask directly - a modded
+		// container that doesn't follow this convention just won't get capped in the preview.
+		static int? EstimateSlotCount(Block block)
 		{
+			string type = block.Attributes?["defaultType"]?.AsString(null);
+			if (string.IsNullOrEmpty(type)) return null;
+
+			int count = block.Attributes["quantitySlots"][type].AsInt(-1);
+			return count > 0 ? (int?)count : null;
+		}
+
+		bool GiveStarterChest(IServerPlayer player)
+		{
+			// Cheap pre-check so we don't place a chest at all when nothing could ever be given -
+			// the real, capacity-aware loot list is only known once the container is placed below.
+			bool anyPossibleLoot = config.FixedItems.Count > 0
+				|| (config.RandomMode && config.RandomPool.Count > 0 && config.RandomPickCount > 0);
+			if (!anyPossibleLoot) return false;
+
 			Block containerBlock = ResolveContainerBlock();
 			if (containerBlock == null)
 			{
 				sapi.Logger.Error("[StarterChest] Could not find the default chest block either - aborting starter chest placement.");
-				return;
+				return false;
 			}
 
 			BlockPos pos = FindChestPosition(player, containerBlock);
@@ -295,7 +350,7 @@ namespace StarterChest
 			if (be == null)
 			{
 				sapi.Logger.Error("[StarterChest] Container block entity did not spawn at {0} - aborting.", pos);
-				return;
+				return false;
 			}
 
 			be.OnBlockPlaced(null);
@@ -313,29 +368,34 @@ namespace StarterChest
 				}
 			}
 
+			// The real, live slot count - this is what makes the RandomPickCount auto-fit in
+			// BuildLootStacks work correctly for any container, vanilla or modded, without needing
+			// to know its schema in advance.
+			List<ItemStack> stacks = BuildLootStacks(be.Inventory.Count);
+			if (stacks.Count == 0)
+			{
+				// Everything configured turned out to be unresolvable (e.g. all missing-mod codes) -
+				// remove the now-pointless empty container instead of leaving it sitting there.
+				sapi.World.BlockAccessor.SetBlock(0, pos);
+				return false;
+			}
+
 			FillInventory(be, stacks);
 			be.MarkDirty(true, null);
 
 			sapi.Logger.Notification("[StarterChest] Gave {0} a starter chest ({1}) at {2} ({3} item stack(s)).", player.PlayerName, containerBlock.Code, pos, stacks.Count);
-			player.SendMessage(GlobalConstants.GeneralChatGroup, "A starter chest has appeared nearby!", EnumChatType.Notification, null);
+			player.SendMessage(GlobalConstants.GeneralChatGroup, Lang.GetL(player.LanguageCode, "starterchest:chest-appeared"), EnumChatType.Notification, null);
+			return true;
 		}
 
 		void FillInventory(BlockEntityGenericTypedContainer be, List<ItemStack> stacks)
 		{
 			InventoryBase inv = be.Inventory;
-			int slot = 0;
 
-			foreach (ItemStack stack in stacks)
+			for (int slot = 0; slot < stacks.Count; slot++)
 			{
-				if (slot >= inv.Count)
-				{
-					sapi.Logger.Warning("[StarterChest] The starter chest only has {0} slots - {1} configured loot entrie(s) did not fit and were skipped. Reduce FixedItems/RandomPickCount to avoid this.", inv.Count, stacks.Count - slot);
-					break;
-				}
-
-				inv[slot].Itemstack = stack;
+				inv[slot].Itemstack = stacks[slot];
 				inv.MarkSlotDirty(slot);
-				slot++;
 			}
 		}
 

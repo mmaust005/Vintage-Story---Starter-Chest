@@ -24,6 +24,16 @@ new character. Instead, server operators (`controlserver` privilege) can run:
 This clears that (online) player's starter-chest flag and immediately gives them a fresh chest
 with the current config - no restart or new character needed.
 
+To check what a config change *would* give without spawning a chest at all:
+
+```
+/starterchest preview <playername>
+```
+
+This rolls the current config and prints the resulting item list to chat, without placing
+anything or touching the player's received-chest flag - handy for tuning `Weight` values without
+littering the world with test chests.
+
 ## Config
 
 On first run the mod writes `ModConfig/StarterChestConfig.json` in your server/game data folder,
@@ -90,9 +100,13 @@ Each entry (`FixedItems` and `RandomPool`) supports:
 
 If a configured code belongs to a mod that isn't installed, that entry is skipped and a warning
 is logged - it won't crash the chest or break other entries. The container has a limited number
-of slots (16 for the default chest, 36 for a trunk, varies for modded containers); if
-`FixedItems` + your random picks add up to more than that, the extras are dropped and a warning
-is logged, so keep pick counts reasonable.
+of slots (16 for the default chest, 36 for a trunk, varies for modded containers). `FixedItems`
+are given first; `RandomPickCount` then automatically caps itself to whatever slots are left in
+*that specific container* (read from the real container once placed, so this works correctly for
+modded containers too, not just the vanilla chest/trunk) - so you won't get a log warning from
+this in normal use. The only case still worth a warning is `FixedItems` alone exceeding the
+container's slots, since those are meant to be guaranteed and can't be auto-capped without
+breaking that guarantee.
 
 ### How weighting works
 
