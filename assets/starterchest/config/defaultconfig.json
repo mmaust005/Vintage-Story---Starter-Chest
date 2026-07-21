@@ -1,8 +1,8 @@
 {
-	"ContainerCode": "game:chest",
+	"ContainerCode": "game:stationarybasket",
 	"ContainerOrientation": "",
 	"RandomMode": true,
-	"RandomPickCount": 4,
+	"RandomPickCount": 5,
 	"AllowDuplicatePicks": false,
 	"FixedItems": [],
 	"RandomPool": [

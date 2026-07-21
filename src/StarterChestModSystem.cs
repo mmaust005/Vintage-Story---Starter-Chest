@@ -47,21 +47,14 @@ namespace StarterChest
 				.EndSubCommand();
 		}
 
-		/// <summary>
-		/// Lets another mod (e.g. an addon) supply a per-player loadout override instead of the
-		/// top-level FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks - for example to vary
-		/// loot by character class. Only one provider can be registered at a time; a later call
-		/// replaces an earlier one.
-		///
-		/// readyCheck is optional. If given, it's polled (every ~250ms, up to a ~15s timeout) before
-		/// giving a new player's automatic chest, so the provider can wait for whatever it needs
-		/// (e.g. character creation to finish) before being asked to resolve a loadout. Without a
-		/// readyCheck, the provider is asked to resolve immediately, same timing as the base mod.
-		///
-		/// Call this from your addon's StartServerSide, once you have a reference to this mod's
-		/// system, e.g.:
-		///   sapi.ModLoader.GetModSystem&lt;StarterChestModSystem&gt;()?.RegisterLoadoutProvider(MyProvider, MyReadyCheck);
-		/// </summary>
+		// Lets another mod supply a per-player loadout override instead of the top-level
+		// FixedItems/RandomPool/RandomPickCount/AllowDuplicatePicks, e.g. to vary loot by
+		// character class. Only one provider at a time; a later call replaces an earlier one.
+		// readyCheck is optional - polled (every ~250ms, up to a ~15s timeout) before giving a new
+		// player's automatic chest, so the provider can wait for something (e.g. character
+		// creation finishing) before being asked to resolve a loadout. Call from an addon's
+		// StartServerSide:
+		//   sapi.ModLoader.GetModSystem<StarterChestModSystem>()?.RegisterLoadoutProvider(MyProvider, MyReadyCheck);
 		public void RegisterLoadoutProvider(StarterChestLoadoutProvider provider, StarterChestReadyCheck readyCheck = null)
 		{
 			loadoutProvider = provider;
@@ -123,9 +116,8 @@ namespace StarterChest
 
 			if (!System.IO.File.Exists(configPath))
 			{
-				// Seed the on-disk file with the packaged asset's raw bytes (not a re-serialized
-				// object) so the formatting survives onto disk as-is. This file is never touched
-				// again afterwards, so any edits/comments the user later adds stick around.
+				// Seed with the packaged asset's raw bytes, not a re-serialized object, so
+				// formatting survives as-is. Never touched again after this.
 				IAsset seedAsset = sapi.Assets.TryGet(PackagedDefaultConfigLocation, true);
 				if (seedAsset != null)
 				{
@@ -193,14 +185,12 @@ namespace StarterChest
 		const int ReadyPollMs = 250;
 		const int ReadyTimeoutMs = 15000;
 
-		// Without a registered readyCheck, gives immediately on PlayerNowPlaying - same timing as
-		// the base mod always had. With one (e.g. registered by an addon that needs to wait for
-		// something, like character creation completing, before it can resolve a loadout), polls it
-		// briefly first, bounded by a timeout so a player is never stuck without a chest.
+		// No registered readyCheck: give immediately on PlayerNowPlaying. With one, poll it first
+		// (bounded by a timeout) so the provider can wait for something before resolving a loadout.
 		void TryGiveWhenReady(IServerPlayer player, int elapsedMs)
 		{
-			// A player mid-character-creation is legitimately in the "Connected" state, not yet
-			// "Playing" - only bail out here on a genuine disconnect.
+			// Mid-character-creation is legitimately "Connected", not yet "Playing" - only bail
+			// out on a genuine disconnect.
 			if (player.ConnectionState == EnumClientState.Offline)
 			{
 				return;
@@ -216,9 +206,8 @@ namespace StarterChest
 			sapi.World.RegisterCallback(_ => TryGiveWhenReady(player, elapsedMs + ReadyPollMs), ReadyPollMs);
 		}
 
-		// Uses the registered loadout provider (if any) to get a per-player override; falls back to
-		// the top-level config otherwise. displayName is whatever the provider supplied (e.g. a
-		// class name), or null when using the top-level config.
+		// Uses the registered loadout provider if present, else the top-level config. displayName
+		// is whatever the provider supplied, or null for the top-level config.
 		StarterChestLoadout ResolveLoadout(IServerPlayer player, out string displayName)
 		{
 			if (loadoutProvider != null)
@@ -263,8 +252,8 @@ namespace StarterChest
 				var pool = loadout.RandomPool.Where(e => ResolveCollectible(e) != null).ToList();
 				var remaining = new List<LootEntry>(pool);
 
-				// Auto-fit: never attempt more picks than the container has room left for, instead
-				// of rolling the full RandomPickCount and dropping whatever doesn't fit afterwards.
+				// Auto-fit: cap picks to remaining room instead of rolling the full
+				// RandomPickCount and dropping whatever doesn't fit afterwards.
 				int picks = Math.Min(loadout.RandomPickCount, Math.Max(0, maxSlots - result.Count));
 				for (int i = 0; i < picks && remaining.Count > 0; i++)
 				{
@@ -331,8 +320,8 @@ namespace StarterChest
 
 		Block ResolveContainerBlock()
 		{
-			// Picked once per chest so a fixed ContainerOrientation applies consistently to both
-			// the configured code and the fallback, instead of re-rolling for each.
+			// Picked once per chest so a fixed ContainerOrientation applies to both the
+			// configured code and the fallback, instead of re-rolling for each.
 			string orientation = PickOrientation();
 
 			Block block = ResolveContainerBlockForBaseCode(config.ContainerCode, orientation);
@@ -350,8 +339,7 @@ namespace StarterChest
 			Block block = sapi.World.BlockAccessor.GetBlock(new AssetLocation($"{baseCode}-{orientation}"));
 			if (IsContainerBlock(block)) return block;
 
-			// Not every container is direction-variant (some modded ones, or an already-complete
-			// code like "somemodid:special-chest-north") - fall back to the bare code as-is.
+			// Not every container is direction-variant - fall back to the bare code as-is.
 			block = sapi.World.BlockAccessor.GetBlock(new AssetLocation(baseCode));
 			if (IsContainerBlock(block)) return block;
 
@@ -387,10 +375,9 @@ namespace StarterChest
 			}
 		}
 
-		// Best-effort slot count read from the block's own JSON attributes, following the same
-		// "quantitySlots"/"defaultType" convention the vanilla chest and trunk use. Only meant for
-		// the preview command, which can't place a real block entity to ask directly - a modded
-		// container that doesn't follow this convention just won't get capped in the preview.
+		// Best-effort slot count from the block's own "quantitySlots"/"defaultType" attributes.
+		// Preview-only - a modded container that doesn't follow this convention just won't be
+		// capacity-capped in the preview.
 		static int? EstimateSlotCount(Block block)
 		{
 			string type = block.Attributes?["defaultType"]?.AsString(null);
@@ -404,8 +391,8 @@ namespace StarterChest
 		{
 			StarterChestLoadout loadout = ResolveLoadout(player, out string displayName);
 
-			// Cheap pre-check so we don't place a chest at all when nothing could ever be given -
-			// the real, capacity-aware loot list is only known once the container is placed below.
+			// Skip placement entirely when nothing could ever be given - the real,
+			// capacity-aware loot list is only known once the container is placed below.
 			bool anyPossibleLoot = loadout.FixedItems.Count > 0
 				|| (loadout.RandomMode && loadout.RandomPool.Count > 0 && loadout.RandomPickCount > 0);
 			if (!anyPossibleLoot) return false;
@@ -421,9 +408,8 @@ namespace StarterChest
 
 			sapi.World.BlockAccessor.SetBlock(containerBlock.Id, pos);
 
-			// Runs block-level placement behaviors (e.g. the trunk's Multiblock behavior, which
-			// registers its second block position) - SetBlock alone only sets the voxel, it doesn't
-			// invoke placement hooks the way a normal player placement would.
+			// Runs block-level placement behaviors (e.g. multiblock second-position setup) that
+			// SetBlock alone skips.
 			containerBlock.OnBlockPlaced(sapi.World, pos, null);
 
 			var be = sapi.World.BlockAccessor.GetBlockEntity<BlockEntityGenericTypedContainer>(pos);
@@ -435,10 +421,8 @@ namespace StarterChest
 
 			be.OnBlockPlaced(null);
 
-			// SetBlock places the correct block variant (chest-north/east/south/west, ...) but
-			// bypasses DoPlaceBlock, which is what normally derives the entity's rendered MeshAngle
-			// from the player's facing during a real placement. Without this, every chest renders
-			// at the same default angle regardless of which variant was actually placed.
+			// SetBlock bypasses DoPlaceBlock, which normally derives the entity's rendered
+			// MeshAngle from player facing - set it explicitly from the placed variant.
 			if (containerBlock.Variant.TryGetValue("side", out string side))
 			{
 				float? meshAngle = OrientationToMeshAngle(side);
@@ -448,14 +432,11 @@ namespace StarterChest
 				}
 			}
 
-			// The real, live slot count - this is what makes the RandomPickCount auto-fit in
-			// BuildLootStacks work correctly for any container, vanilla or modded, without needing
-			// to know its schema in advance.
+			// Real, live slot count - makes RandomPickCount auto-fit work for any container.
 			List<ItemStack> stacks = BuildLootStacks(be.Inventory.Count, loadout);
 			if (stacks.Count == 0)
 			{
-				// Everything configured turned out to be unresolvable (e.g. all missing-mod codes) -
-				// remove the now-pointless empty container instead of leaving it sitting there.
+				// Everything configured was unresolvable - remove the pointless empty container.
 				sapi.World.BlockAccessor.SetBlock(0, pos);
 				return false;
 			}
@@ -468,15 +449,13 @@ namespace StarterChest
 			return true;
 		}
 
-		// Resolves via Lang.GetL first (so real dedicated servers with mod translations loaded get
-		// a properly localized message), but falls back to a hardcoded English string if that key
-		// didn't resolve (GetL returns the raw key on a miss) - mod-added lang entries aren't
-		// always guaranteed to be loaded server-side, and a player should never see a raw lang key.
+		// Tries Lang.GetL first, falling back to a hardcoded English string if the key didn't
+		// resolve (GetL returns the raw key on a miss) - mod-added lang entries aren't always
+		// guaranteed to be loaded server-side.
 		string BuildAppearedMessage(IServerPlayer player, Block containerBlock, BlockPos pos, string displayName)
 		{
-			// The block's own display name (e.g. "Chest", "Trunk", or whatever a modded container
-			// calls itself), lowercased to read naturally mid-sentence - so the message always
-			// matches the actually-configured ContainerCode instead of assuming "chest".
+			// Actual block display name, lowercased for mid-sentence reading, so the message
+			// matches the configured ContainerCode instead of assuming "chest".
 			string containerName = containerBlock.GetPlacedBlockName(sapi.World, pos).ToLowerInvariant();
 
 			if (!string.IsNullOrEmpty(displayName))
@@ -489,8 +468,7 @@ namespace StarterChest
 				?? $"A starter {containerName} has appeared nearby!";
 		}
 
-		// Returns null (or fallback, if given) instead of the raw key when a translation is missing,
-		// unlike Lang.GetL itself which returns the key as-is on a miss.
+		// Returns null (or fallback) instead of the raw key when a translation is missing.
 		static string ResolveWithFallback(string langCode, string key, string fallback, params object[] args)
 		{
 			string resolved = Lang.GetL(langCode, key, args);
@@ -508,11 +486,8 @@ namespace StarterChest
 			}
 		}
 
-		// The trunk visually/physically occupies a second cell next to the one it's actually placed
-		// in (a "virtual" second cell handled via collision-mirroring, not a second SetBlock), sized
-		// and positioned per orientation in its own asset (assets/survival/blocktypes/wood/chest-trunk.json,
-		// the "Multiblock" behavior's propertiesByType). There's no public API to read that at
-		// runtime, so it's hardcoded here as the one known wide container worth accounting for.
+		// The trunk's second cell is a virtual, collision-mirrored cell, not a second SetBlock -
+		// no public API exposes it, so hardcode the one known wide container worth checking.
 		static readonly Dictionary<string, Vec3i> TrunkSecondCellOffset = new Dictionary<string, Vec3i>
 		{
 			{ "north", new Vec3i(1, 0, 0) },
@@ -543,7 +518,7 @@ namespace StarterChest
 				if (IsSuitable(candidate, containerBlock)) return candidate;
 			}
 
-			// Nothing ideal nearby - just place it in front of the player, like a direct block placement would.
+			// Nothing ideal nearby - place in front of the player, like a direct placement would.
 			return candidates[0];
 		}
 
@@ -567,10 +542,8 @@ namespace StarterChest
 			Block here = accessor.GetBlock(pos);
 			Block below = accessor.GetBlock(pos.DownCopy(1));
 
-			// Replaceable (grass, shrubs, snow layers, ...) is fine to overwrite at the chest's own
-			// position, but for the block below we need an actual solid top face - a shrub, for
-			// example, is non-replaceable but still has no solid top, so it must not count as
-			// "ground" or the chest ends up floating on top of it.
+			// Replaceable at the container's own cell is fine; the cell below needs an actual
+			// solid top face, or the container ends up floating.
 			return here.Replaceable >= 6000 && below.SideSolid.OnSide(BlockFacing.UP);
 		}
 	}

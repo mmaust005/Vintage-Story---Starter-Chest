@@ -4,61 +4,45 @@ namespace StarterChest
 {
 	public class LootEntry
 	{
-		/// <summary>
-		/// Item or block code, e.g. "game:bread-rye-perfect", "flint" (defaults to the "game" domain
-		/// if no domain is given), or "othermodid:someitem" for items/blocks added by other mods.
-		/// </summary>
+		// Item or block code, e.g. "game:bread-rye-perfect" or "othermodid:someitem". No domain
+		// prefix defaults to "game".
 		public string Code = "game:flint";
 
-		/// <summary>"item" or "block".</summary>
+		// "item" or "block".
 		public string Type = "item";
 
 		public int MinQuantity = 1;
 		public int MaxQuantity = 1;
 
-		/// <summary>Relative chance of being picked when RandomMode is on. Ignored for FixedItems.</summary>
+		// Relative chance of being picked when RandomMode is on. Ignored for FixedItems.
 		public int Weight = 100;
 	}
 
 	public class StarterChestConfig
 	{
-		/// <summary>
-		/// Which block to place as the starter container, without an orientation suffix, e.g.
-		/// "game:chest" (16 slots) or "game:trunk" (36 slots). Any valid placeable container block
-		/// code works, including ones from other mods. Falls back to the default chest if the code
-		/// is invalid or not a container. See ContainerOrientation for which way it faces.
-		/// </summary>
+		// Container block to place, without an orientation suffix, e.g. "game:chest" or
+		// "game:trunk". Falls back to the default chest if invalid or not a container.
 		public string ContainerCode = "game:chest";
 
-		/// <summary>
-		/// Which direction the container faces: "north", "east", "south", or "west". Leave empty
-		/// (the default) to pick a random direction for each player - purely cosmetic, doesn't
-		/// affect slot count or any other behavior.
-		/// </summary>
+		// "north", "east", "south", or "west". Empty picks a random direction per player.
 		public string ContainerOrientation = "";
 
-		/// <summary>
-		/// When true (the default), RandomPickCount entries are randomly drawn from RandomPool
-		/// and added on top of FixedItems.
-		/// When false, only FixedItems are given.
-		/// </summary>
+		// True: RandomPickCount entries drawn from RandomPool, added on top of FixedItems.
+		// False: only FixedItems given.
 		public bool RandomMode = true;
 
-		/// <summary>How many entries to draw from RandomPool when RandomMode is true.</summary>
-		public int RandomPickCount = 4;
+		// How many entries to draw from RandomPool when RandomMode is true.
+		public int RandomPickCount = 5;
 
-		/// <summary>If true, the same pool entry can be picked more than once.</summary>
+		// True: the same pool entry can be picked more than once.
 		public bool AllowDuplicatePicks = false;
 
-		/// <summary>Items always placed in the chest, regardless of RandomMode.</summary>
+		// Items always placed, regardless of RandomMode.
 		public List<LootEntry> FixedItems = new List<LootEntry>();
 
-		/// <summary>
-		/// Candidate items for random picks. Only used when RandomMode is true. Left empty here on
-		/// purpose - the real shipped default lives in assets/starterchest/config/defaultconfig.json
-		/// and is only used when no user config file exists yet; this bare object is just the
-		/// last-resort fallback if that packaged asset can't be found or parsed.
-		/// </summary>
+		// Candidate items for random picks. Empty here on purpose - the shipped default lives in
+		// assets/starterchest/config/defaultconfig.json; this is only the last-resort fallback if
+		// that packaged asset can't be found or parsed.
 		public List<LootEntry> RandomPool = new List<LootEntry>();
 	}
 }

@@ -3,9 +3,10 @@
 Gives every new player on a Vintage Story 1.22.3 server a one-time chest of starting supplies,
 placed on the ground near them the first time they spawn - a configurable, mod-aware starter kit.
 
-- The container defaults to a normal vanilla chest but is configurable (chest, trunk, or any
-  other placeable container block, including modded ones), placed once per player and never
-  refilled or respawned. It faces a random direction by default, or a fixed one if configured.
+- The container defaults to a small reed chest (8 slots) but is configurable (the regular chest,
+  trunk, or any other placeable container block, including modded ones), placed once per player
+  and never refilled or respawned. It faces a random direction by default, or a fixed one if
+  configured.
 - Loot combines guaranteed `FixedItems` with a weighted `RandomPool`, auto-fit to however many
   slots the chosen container actually has - no manual tuning needed for modded containers.
 - Each player is tracked individually (server-side player data), so leaving and rejoining, or
@@ -51,10 +52,10 @@ the server/world - it will be recreated from the packaged file.
 
 ```json
 {
-  "ContainerCode": "game:chest",
+  "ContainerCode": "game:stationarybasket",
   "ContainerOrientation": "",
   "RandomMode": true,
-  "RandomPickCount": 4,
+  "RandomPickCount": 5,
   "AllowDuplicatePicks": false,
   "FixedItems": [],
   "RandomPool": [
@@ -64,9 +65,10 @@ the server/world - it will be recreated from the packaged file.
 ```
 
 - **ContainerCode** - which block to place as the starter container, *without* an orientation
-  suffix, e.g. `"game:chest"` (16 slots, default) or `"game:trunk"` (36 slots). Any valid
-  placeable container block code works, including ones from other mods. Falls back to the
-  default chest, with a logged error, if the code is invalid or not a container.
+  suffix. Defaults to `"game:stationarybasket"` (the small reed chest, 8 slots) - other good
+  options are `"game:chest"` (16 slots) or `"game:trunk"` (36 slots). Any valid placeable
+  container block code works, including ones from other mods. Falls back to the default chest,
+  with a logged error, if the code is invalid or not a container.
 - **ContainerOrientation** - which way the container faces: `"north"`, `"east"`, `"south"`, or
   `"west"`. Leave it as `""` (default) to pick a random direction for each player - it's purely
   cosmetic and has no effect on slot count or any other behavior. An invalid value falls back to
@@ -101,7 +103,8 @@ Each entry (`FixedItems` and `RandomPool`) supports:
 
 If a configured code belongs to a mod that isn't installed, that entry is skipped and a warning
 is logged - it won't crash the chest or break other entries. The container has a limited number
-of slots (16 for the default chest, 36 for a trunk, varies for modded containers). `FixedItems`
+of slots (8 for the default reed chest, 16 for a normal chest, 36 for a trunk, varies for modded
+containers). `FixedItems`
 are given first; `RandomPickCount` then automatically caps itself to whatever slots are left in
 *that specific container* (read from the real container once placed, so this works correctly for
 modded containers too, not just the vanilla chest/trunk) - so you won't get a log warning from

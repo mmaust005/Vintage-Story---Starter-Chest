@@ -17,6 +17,9 @@
 - `RandomPickCount` now automatically caps itself to the real container's remaining slots (read
   from the placed container, so this works correctly for modded containers too) instead of
   rolling the full count and dropping/warning about overflow afterwards.
+- Default `ContainerCode` is now `game:stationarybasket` (a small reed chest, 8 slots) instead of
+  the 16-slot chest - a starter kit fits comfortably without a backpack. Default `RandomPickCount`
+  bumped from 4 to 5 to match.
 
 ## 1.0.0
 
