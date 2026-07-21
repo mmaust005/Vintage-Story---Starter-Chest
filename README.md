@@ -58,7 +58,8 @@ the server/world - it will be recreated from the packaged file.
   "FixedItems": [],
   "RandomPool": [
     { "Code": "game:firestarter", "Type": "item", "MinQuantity": 1, "MaxQuantity": 1, "Weight": 15 }
-  ]
+  ],
+  "ClassLoadouts": {}
 }
 ```
 
@@ -188,6 +189,17 @@ your side-by-side SDK folder to PATH (before the existing `dotnet`) for this she
 
 By default, `StarterChest.csproj` looks for the game/data folders under `%APPDATA%`. Set the
 `VINTAGE_STORY` / `VINTAGE_STORY_DATA` environment variables to override either path.
+
+### Packaging a release
+
+To build a clean zip for the Mod DB or a GitHub Release - just the runtime files (dll, modinfo,
+icon, assets, this README), no source or dev files:
+
+```
+& "$env:USERPROFILE\dotnet-sdk10\dotnet.exe" build -c Release -t:PackMod
+```
+
+This writes `release/StarterChest.zip` (gitignored, rebuilt fresh each time).
 
 ## License
 
